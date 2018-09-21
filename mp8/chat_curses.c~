@@ -1,0 +1,148 @@
+/* chat_curses.c
+ * an example using curses to print to top and bottom of screen
+ * If the terminal is messed up type
+ *     stty sane
+ * to reset terminal settings
+ */
+
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <curses.h>
+
+#define MAXBUFLEN 80
+
+const char *welcome = "Welcome to ECE 222 chat";
+const char *remote_name = "apolloXX";
+
+int main(int argc, char *argv[])
+{
+  char message[MAXBUFLEN];
+  char **storage;
+  int i;
+  int screen_middle;
+  char *screen_divider, *addr;
+  int not_done = 1;
+  int count = 0;
+  int ch;
+  int c1 = 0;
+  int c2 = 0;
+
+	// Initialize Curses System.  Must be called first to set
+  initscr();
+	keypad(stdscr, TRUE);
+
+  // Allocates memory for the number of characters that can be stored depending of the size of the terminal.
+  screen_divider = (char *) malloc((COLS+1) * sizeof(char));
+
+  // Allocates memory
+  storage = (char**)calloc((LINES+1),sizeof(char*));
+  for (c1 = 0; c1 < (LINES + 1); c1++)
+  {
+    storage[c1] = (char*)calloc((COLS+1),sizeof(char));
+  }
+
+  // Stores the line number which stands in the middle of the terminal
+  screen_middle = LINES/2;
+
+  // Fills all columns in the screen_divider to empty spaces
+  memset(screen_divider, ' ', COLS);
+
+  // If the terminal has a width less than 5, will print message.
+  if (COLS < 5)
+  {
+  	fprintf(stderr, "Screen is too small %d\n", COLS);
+  }
+  // If the terminal is not big enough to display all strings, only chat will display
+  else if (COLS < strlen(welcome) + strlen(remote_name) + 1)
+  {
+   	sprintf(screen_divider, "chat");
+  }
+  // If the terminal is big enough, it wil display all strings.
+  else
+  {
+   	memcpy(screen_divider, welcome, strlen(welcome));
+  	addr = screen_divider + COLS - strlen(remote_name);
+    memcpy(addr, remote_name, strlen(remote_name));
+  }
+
+  // The NULL character is stored at the end of character array screen_divider
+  screen_divider[COLS] = '\0';
+
+   // Clear the Screen
+  clear();
+  // Moves location of terminal pointer to middle of the terminal.
+  move(screen_middle, 0);
+  // Makes the next string printed in the terminal bold
+  standout();
+  // Prints string to the terminal
+  addstr(screen_divider);
+  // Turns off bold after string is printed
+  standend();
+  // Moves location of terminal pointer to the last line.
+  move(LINES-1, 0);
+
+  count = 1;
+  c1 = 0;
+  c2 = 0;
+
+  // Loop will run until not_done is changed to any number other than 1.
+  while(not_done == 1)
+  {
+  	// read keyboard input until end of line
+    i = 0;
+
+   	// Stores chat message into character array message until the enter key ('\n') is entered.
+    while((ch = getch()) != '\n')
+    {
+      message[i++] = ch;
+   	}
+
+    // Stores the NULL character into character array message.
+   	message[i] = '\0';
+
+   	// If the user enters quit, the loop will be terminated by changing the value of variable not_done to 1.
+    if (strcmp(message, "quit") == 0)
+    {
+    	not_done = 0;
+    }
+
+    
+    // Move Cursor to Location
+    move(LINES-1 - count, 0);
+    // Display some Text
+    addstr(message);
+    count++;
+
+    if (count >= LINES/2 - 1)
+    {
+      // Clears the screen
+      clear();
+    	count = 0;
+      // Moves text to the middle of the terminal
+      move(screen_middle, 0);
+      // Makes the next print line bold
+      standout();
+      // Displays string screen_divider
+      addstr(screen_divider);
+      // Turns off bold for next text to be printed
+      standend();
+    }
+
+    // Loop stores message input by the user into allocated memory storage.
+    for (c2 = 0; c2 < i; c2++)
+    {
+      storage[c1][c2] = message[c2];
+    }
+    c1++;
+
+    move(LINES-1, 0);  // Move Cursor to Lower Left
+    clrtoeol();        // Clear current line to end of line
+    refresh();         // Update Display
+  }
+
+
+  endwin();    // Quit ncurses system
+  free(screen_divider);
+  return 0;
+}
